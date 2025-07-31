@@ -1,12 +1,13 @@
 'use client'
 
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, useGLTF } from '@react-three/drei'
+import { OrbitControls, useGLTF, useAnimations } from '@react-three/drei'
 import { Suspense, useState, useRef, useEffect } from 'react'
 import * as THREE from 'three'
 
-function Model({ url }: { url: string }) {
-  const { scene } = useGLTF(url)
+function Model({ url, animationName }: { url: string; animationName?: string }) {
+  const { scene, animations } = useGLTF(url)
+  const { actions } = useAnimations(animations, scene)
   
   // 모델을 적당한 크기로 스케일 조정
   scene.scale.set(1, 1, 1)
@@ -15,8 +16,8 @@ function Model({ url }: { url: string }) {
   const box = new THREE.Box3().setFromObject(scene)
   const center = box.getCenter(new THREE.Vector3())
   
-  // 모델을 중심점으로 이동
-  scene.position.sub(center)
+        // 모델을 고정된 위치로 이동 (애니메이션 전에는 원점)
+      scene.position.set(0, 0, 0)
   
   // 캐릭터 좌표 정보 로그 출력
   console.log('=== 캐릭터 좌표 정보 ===')
@@ -26,6 +27,52 @@ function Model({ url }: { url: string }) {
   console.log('모델 위치:', scene.position)
   console.log('모델 크기:', box.getSize(new THREE.Vector3()))
   console.log('========================')
+  
+  // 애니메이션 재생
+  useEffect(() => {
+    if (animationName && actions[animationName]) {
+      // 모든 애니메이션 정지
+      Object.values(actions).forEach(action => {
+        if (action) {
+          action.stop()
+          action.reset()
+        }
+      })
+      
+      // 지정된 애니메이션 재생
+      const action = actions[animationName]
+      action.reset()
+      action.setLoop(THREE.LoopRepeat, Infinity)
+      action.setEffectiveTimeScale(1)
+      action.setEffectiveWeight(1)
+      action.clampWhenFinished = false
+      action.time = 0
+      
+      // 애니메이션의 루트 본 위치 고정
+      const traverseAndFixPosition = (object: THREE.Object3D) => {
+        if (object.type === 'Bone' && object.name.toLowerCase().includes('root')) {
+          object.position.set(0, 0, 0)
+        }
+        object.children.forEach(child => traverseAndFixPosition(child))
+      }
+      traverseAndFixPosition(scene)
+      
+      // 애니메이션 재생 중에도 위치 고정 (애니메이션 적용 시에만 Y축 조정)
+      const fixedPosition = new THREE.Vector3(0, -1, 0)
+      const interval = setInterval(() => {
+        scene.position.copy(fixedPosition)
+      }, 16) // 60fps로 위치 고정
+      
+      action.play()
+      
+      console.log('Playing animation:', animationName)
+      
+      // 클린업 함수
+      return () => {
+        clearInterval(interval)
+      }
+    }
+  }, [actions, animationName])
   
   return <primitive object={scene} />
 }
@@ -43,12 +90,14 @@ interface ThreeJSViewerProps {
   width?: string
   height?: string
   modelUrl?: string
+  animationName?: string
 }
 
 export default function ThreeJSViewer({ 
   width = '100%', 
   height = '300px',
-  modelUrl: initialModelUrl 
+  modelUrl: initialModelUrl,
+  animationName
 }: ThreeJSViewerProps) {
   const [modelUrl, setModelUrl] = useState<string | null>(initialModelUrl || null)
 
@@ -65,7 +114,7 @@ export default function ThreeJSViewer({
         <div className="relative w-full h-full">
           <div style={{ width: '100%', height: '100%', border: '1px solid #ccc', borderRadius: '8px', overflow: 'hidden' }}>
             <Canvas
-              camera={{ position: [0, 1.5, 3], fov: 45 }}
+              camera={{ position: [0, 1.2, 3], fov: 45 }}
               style={{ background: '#fef3c7' }}
               shadows
             >
@@ -77,7 +126,7 @@ export default function ThreeJSViewer({
               <Ground />
               
               <Suspense fallback={null}>
-                <Model url={modelUrl} />
+                <Model url={modelUrl} animationName={animationName} />
               </Suspense>
               <OrbitControls 
                 enablePan={false} 

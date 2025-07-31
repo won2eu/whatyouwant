@@ -6,14 +6,54 @@ import { Button } from "@/components/ui/button"
 import { ArrowUp, Paperclip } from "lucide-react"
 import { useState } from "react"
 
-export default function Component() {
-  const [message, setMessage] = useState("")
+interface ChatResponse {
+  response: string
+  model: string
+}
 
-  const handleSubmit = (e: React.FormEvent) => {
+interface ComponentProps {
+  onResponse?: (response: string | null) => void
+  onPrompt?: (prompt: string) => void
+}
+
+export default function Component({ onResponse, onPrompt }: ComponentProps) {
+  const [message, setMessage] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (message.trim()) {
-      console.log("메시지 전송:", message)
-      setMessage("")
+    if (message.trim() && !isLoading) {
+      setIsLoading(true)
+      
+      // 프롬프트에 따라 애니메이션 설정
+      onPrompt?.(message.trim())
+      
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: message.trim() })
+        })
+        
+        if (response.ok) {
+          const data: ChatResponse = await response.json()
+          onResponse?.(data.response)
+          
+          // 5초 후 응답 사라지게 하기
+          setTimeout(() => {
+            onResponse?.(null)
+          }, 5000)
+        } else {
+          console.error('API 오류:', response.status)
+        }
+      } catch (error) {
+        console.error('요청 오류:', error)
+      } finally {
+        setIsLoading(false)
+        setMessage("")
+      }
     }
   }
 
@@ -45,10 +85,14 @@ export default function Component() {
             <Button
               type="submit"
               size="icon"
-              disabled={!message.trim()}
+              disabled={!message.trim() || isLoading}
               className="shrink-0 h-10 w-10 rounded-xl bg-black hover:bg-black/60 disabled:bg-black/70"
             >
-              <ArrowUp className="h-5 w-5" />
+              {isLoading ? (
+                <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <ArrowUp className="h-5 w-5" />
+              )}
               <span className="sr-only">전송</span>
             </Button>
           </div>

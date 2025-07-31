@@ -24,6 +24,14 @@ export default function AnimatedModel({
     console.log('Available animations:', animations.map(anim => anim.name))
     console.log('Available actions:', Object.keys(actions))
 
+    // 모든 애니메이션 정지
+    Object.values(actions).forEach(action => {
+      if (action) {
+        action.stop()
+        action.reset()
+      }
+    })
+
     // 기본 애니메이션 재생
     if (actions[animationName]) {
       const action = actions[animationName]
@@ -35,25 +43,14 @@ export default function AnimatedModel({
       action.setEffectiveTimeScale(1)
       action.setEffectiveWeight(1)
       action.clampWhenFinished = false
+      action.time = 0
       
       // 애니메이션 재생
       action.play()
       
-      console.log('Animation loop set to:', action.loop)
-    } else if (animations.length > 0) {
-      // 첫 번째 애니메이션 재생
-      const firstAction = Object.values(actions)[0] as THREE.AnimationAction
-      if (firstAction) {
-        console.log('Playing first available animation')
-        firstAction.reset()
-        firstAction.setLoop(THREE.LoopRepeat, Infinity)
-        firstAction.setEffectiveTimeScale(1)
-        firstAction.setEffectiveWeight(1)
-        firstAction.clampWhenFinished = false
-        firstAction.play()
-      }
+      console.log('Animation is playing:', action.isRunning())
     } else {
-      console.log('No animations found')
+      console.log('Animation not found:', animationName)
     }
   }, [actions, animationName, loop, animations])
 

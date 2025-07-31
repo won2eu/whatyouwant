@@ -10,10 +10,66 @@ export default function MainUI() {
   const [isLoading, setIsLoading] = useState(false)
   const [generatedGlbUrl, setGeneratedGlbUrl] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [chatResponse, setChatResponse] = useState<string | null>(null)
+  const [displayedText, setDisplayedText] = useState<string>("")
+  const [currentAnimation, setCurrentAnimation] = useState<string>("walking") // 현재 애니메이션
+  const [generatedAnimation, setGeneratedAnimation] = useState<string>("") // 생성된 GLB의 애니메이션
   const titleRef = useRef<HTMLDivElement>(null)
   const anyoneRef = useRef<HTMLSpanElement>(null)
   const asYouRef = useRef<HTMLSpanElement>(null)
   const wantRef = useRef<HTMLSpanElement>(null)
+
+  // 타이핑 효과
+  useEffect(() => {
+    if (chatResponse) {
+      setDisplayedText("")
+      let index = 0
+      const timer = setInterval(() => {
+        if (index < chatResponse.length) {
+          setDisplayedText(chatResponse.slice(0, index + 1))
+          index++
+        } else {
+          clearInterval(timer)
+        }
+      }, 50) // 50ms마다 한 글자씩
+
+      return () => clearInterval(timer)
+    }
+  }, [chatResponse])
+
+  // 애니메이션 시퀀스 함수
+  const startAnimationSequence = () => {
+    // 1. 걷기 (walking) - 기본 상태에서 시작
+    setCurrentAnimation("walking")
+    
+    // 밀기 애니메이션을 여러 번 실행 (1초, 3초, 5초, 7초, 9초 후)
+    const pushTimes = [2200, 3000, 5000, 7000, 9000]
+    
+    pushTimes.forEach((delay) => {
+      setTimeout(() => {
+        setCurrentAnimation("pushing")
+      }, delay)
+    })
+    
+    // 마지막 밀기 후 다시 걷기 (12초 후)
+    setTimeout(() => {
+      setCurrentAnimation("walking")
+    }, 12000)
+  }
+
+  // 프롬프트에 따라 애니메이션 설정
+  const setAnimationFromPrompt = (prompt: string) => {
+    const lowerPrompt = prompt.toLowerCase()
+    if (lowerPrompt.includes('ㅎㅇ') || lowerPrompt.includes('안녕')) {
+      setGeneratedAnimation('waving')
+    } else if (lowerPrompt.includes('춤 쳐줘')) {
+      setGeneratedAnimation('dancing')
+    } else if (lowerPrompt.includes('다른 춤')) {
+      setGeneratedAnimation('swing')
+    } else {
+      setGeneratedAnimation('waving') // 기본값
+    }
+  }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -27,7 +83,10 @@ export default function MainUI() {
           return
         }
         
-        // 먼저 애니메이션 시작
+        // 애니메이션 시퀀스 시작
+        startAnimationSequence()
+        
+        // pushAnimation 함수 호출
         pushAnimation()
         
         setIsGenerating(true)
@@ -132,23 +191,21 @@ export default function MainUI() {
         duration: 12,
         ease: 'none',
         onComplete: () => {
-          // 3D 캐릭터가 사라진 후 다시 돌아오기
-          setTimeout(() => {
-            gsap.to(modelViewer, {
-              x: '0%',
-              duration: 10,
-              ease: 'power2.out'
-            })
-          }, 3000) // 3초 후 돌아오기
+          // 애니메이션 끝나면 더 멀리 나가기
+          gsap.to(modelViewer, {
+            x: '-400%',
+            duration: 3,
+            ease: 'power2.in'
+          })
         }
       })
       
-      // Upload 상자는 1초 뒤에 움직이기
+      // Upload 상자는 2초 뒤에 움직이기
       gsap.to(uploadBox, {
         x: '-170%',
         duration: 10,
         ease: 'none',
-        delay: 3,
+        delay: 2.3,
         onComplete: () => {
           // 상자가 완전히 사라진 후 다른 화면으로 전환
           setTimeout(() => {
@@ -376,9 +433,10 @@ export default function MainUI() {
             <div className="bg-transparent p-8 h-96 flex items-center justify-center transform translate-x-0" id="modelViewer">
               <div className="w-full h-full">
                 <StaticModelViewer 
-                  modelPath="/models/Waving.glb"
+                  modelPath={isGenerating ? "/models/complete.glb" : "/models/Waving.glb"}
                   width="100%"
                   height="100%"
+                  animationName={isGenerating ? currentAnimation : "Armature|mixamo.com|Layer0"}
                 />
               </div>
             </div>
@@ -395,6 +453,7 @@ export default function MainUI() {
             modelUrl={generatedGlbUrl}
             width="100vw"
             height="100vh"
+            animationName={generatedAnimation}
           />
         </div>
       )}
@@ -402,7 +461,18 @@ export default function MainUI() {
       {/* 프롬프트 입력 컴포넌트 - 로딩 완료 시 표시 */}
       {generatedGlbUrl && (
         <div id="promptComponent" className="absolute bottom-0 left-0 right-0 z-10 opacity-0">
-          <Component />
+          <Component onResponse={setChatResponse} onPrompt={setAnimationFromPrompt} />
+        </div>
+      )}
+
+      {/* 채팅 응답 표시 - 캐릭터 옆에 */}
+      {generatedGlbUrl && displayedText && (
+        <div className="absolute top-[13%] left-[60%] z-20 pointer-events-none">
+          <div className="bg-transparent rounded-2xl p-4" style={{ width: '400px' }}>
+            <p className="text-2xl text-black leading-relaxed">
+              {displayedText}
+            </p>
+          </div>
         </div>
       )}
     </div>

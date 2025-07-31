@@ -16,14 +16,6 @@ export default function StaticModelViewer({
   width = '100%', 
   height = '100%' 
 }: StaticModelViewerProps) {
-  // 모델 경로에 따라 애니메이션 이름 결정
-  const getAnimationName = (path: string) => {
-    if (path.includes('07_02_stageii_animated')) {
-      return 'SMPLX_ArmatureAction'
-    }
-    return 'Armature|mixamo.com|Layer0'
-  }
-
   return (
     <div style={{ width, height }} className="bg-transparent rounded-lg overflow-hidden">
       <Canvas
@@ -38,7 +30,7 @@ export default function StaticModelViewer({
         <Suspense fallback={null}>
           <AnimatedModel 
             modelPath={modelPath}
-            animationName={getAnimationName(modelPath)}
+            animationName="Armature|mixamo.com|Layer0"
             loop={true}
           />
         </Suspense>

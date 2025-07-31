@@ -25,7 +25,7 @@ export default function Component() {
   }
 
   return (
-    <div className="bg-transparent backdrop-blur-sm">
+    <div className="bg-transparent">
       <div className="max-w-4xl mx-auto p-10">
         <form onSubmit={handleSubmit} className="relative">
           <div className="relative flex items-center gap-2 bg-white rounded-4xl border border-black shadow-lg p-2 min-h-[80px]">

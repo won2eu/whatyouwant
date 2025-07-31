@@ -1,31 +1,66 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import StaticModelViewer from './StaticModelViewer'
+import ThreeJSViewer from './ThreeJSViewer'
+import Component from './prompt-input'
 
 export default function MainUI() {
   const [isLoading, setIsLoading] = useState(false)
-  const [modelPath, setModelPath] = useState('/models/Waving.glb')
+  const [generatedGlbUrl, setGeneratedGlbUrl] = useState<string | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
   const titleRef = useRef<HTMLDivElement>(null)
   const anyoneRef = useRef<HTMLSpanElement>(null)
   const asYouRef = useRef<HTMLSpanElement>(null)
   const wantRef = useRef<HTMLSpanElement>(null)
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       console.log('파일 선택됨:', file.name)
       
-      // 07번 CMU 애니메이션이 적용된 GLB 파일로 변경
-      const cmuModelPath = '/models/07_02_stageii_animated.glb'
-      console.log('07번 CMU 애니메이션 모델 적용:', cmuModelPath)
-      
-      // 모델 경로를 동적으로 변경하기 위해 상태 추가
-      setModelPath(cmuModelPath)
-      
-      // 파일 선택 후 애니메이션 시작
-      pushAnimation()
+      try {
+        // 파일 형식 검증
+        if (!file.name.toLowerCase().endsWith('.png')) {
+          alert('PNG 파일만 업로드 가능합니다.')
+          return
+        }
+        
+        // 먼저 애니메이션 시작
+        pushAnimation()
+        
+        setIsGenerating(true)
+        
+        // FormData 생성
+        const formData = new FormData()
+        formData.append('image', file)
+        
+        // API 호출
+        console.log('3D 캐릭터 생성 API 호출 중...')
+        const response = await fetch('/api/generate-character', {
+          method: 'POST',
+          body: formData,
+        })
+        
+        if (response.ok) {
+          // GLB 파일을 Blob으로 받기
+          const glbBlob = await response.blob()
+          const glbUrl = URL.createObjectURL(glbBlob)
+          setGeneratedGlbUrl(glbUrl)
+          
+          console.log('3D 캐릭터 생성 완료!')
+        } else {
+          const errorData = await response.json()
+          console.error('API 오류:', errorData)
+          alert(`오류가 발생했습니다: ${errorData.detail}`)
+        }
+      } catch (error) {
+        console.error('파일 업로드 오류:', error)
+        alert('파일 업로드 중 오류가 발생했습니다.')
+      } finally {
+        setIsGenerating(false)
+      }
     }
   }
 
@@ -217,6 +252,42 @@ export default function MainUI() {
     }
   }, [])
 
+  // generatedGlbUrl이 설정되면 애니메이션 실행
+  useEffect(() => {
+    if (generatedGlbUrl) {
+            // 타이틀과 Processing을 화면 밖으로 애니메이션
+      gsap.to([titleRef.current, '#processingText'], {
+        y: '-100vh',
+        opacity: 0,
+        duration: 1,
+        ease: 'power2.inOut',
+        stagger: 0.2,
+        onComplete: () => {
+          // 타이틀과 Processing이 완전히 사라진 후 확대축소 애니메이션 시작
+          gsap.fromTo('#threejsViewer', 
+            { 
+              scale: 2.5, 
+              opacity: 0,
+              transformOrigin: 'center center'
+            },
+            { 
+              scale: 1, 
+              opacity: 1, 
+              duration: 1.5, 
+              ease: 'power2.out'
+            }
+          )
+        }
+      })
+      
+      // 프롬프트 입력 컴포넌트를 아래에서 위로 올라오게 애니메이션
+      gsap.fromTo('#promptComponent', 
+        { y: '100vh', opacity: 0 },
+        { y: 0, opacity: 1, duration: 1, delay: 2.3, ease: 'power2.out' }
+      )
+    }
+  }, [generatedGlbUrl])
+
   return (
     <div className="h-full flex flex-col p-8 bg-amber-200/50">
       {/* 제목 애니메이션 - 왼쪽에 크게 배치 */}
@@ -248,6 +319,7 @@ export default function MainUI() {
                 <span className="inline-block text-black" style={{ transformStyle: 'preserve-3d' }}>a</span>
                 <span className="inline-block text-black" style={{ transformStyle: 'preserve-3d' }}>n</span>
                 <span className="inline-block text-black" style={{ transformStyle: 'preserve-3d' }}>t</span>
+                <span className="inline-block text-black" style={{ transformStyle: 'preserve-3d' }}>!</span>
               </span>
             </span>
           </h1>
@@ -277,41 +349,62 @@ export default function MainUI() {
       </div>
 
       {/* 메인 콘텐츠 영역 */}
-      <div className="flex items-center justify-center gap-12 max-w-6xl w-full mx-auto">
-        {/* 사진 업로드 영역 */}
-        <div className="flex-1 max-w-md">
-          <div className="bg-transparent h-72 backdrop-blur-sm rounded-3xl p-8 border-3 border-black shadow-2xl hover:shadow-amber-200/30 hover:scale-105 transform translate-x-0" id="uploadBox">
-            <div className="text-center h-full flex flex-col justify-center items-center">
-              <h3 className="text-3xl font-bold text-gray-800 mb-6">Upload Hater</h3>
-              <p className="text-gray-600 mb-4 leading-relaxed">you can do control your hater in this website</p>
-              <input 
-                type="file" 
-                id="fileInput" 
-                accept="image/*" 
-                style={{ display: 'none' }} 
-                onChange={(e) => handleFileUpload(e)}
-              />
-              <button className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl" onClick={() => document.getElementById('fileInput')?.click()}>
-                Try it!
-              </button>
+      {!generatedGlbUrl ? (
+        <div className="flex items-center justify-center gap-12 max-w-6xl w-full mx-auto">
+          {/* 사진 업로드 영역 */}
+          <div className="flex-1 max-w-md">
+            <div className="bg-transparent h-72 backdrop-blur-sm rounded-3xl p-8 border-3 border-black shadow-2xl hover:shadow-amber-200/30 hover:scale-105 transform translate-x-0" id="uploadBox">
+              <div className="text-center h-full flex flex-col justify-center items-center">
+                <h3 className="text-3xl font-bold text-gray-800 mb-6">Upload Hater</h3>
+                <p className="text-gray-600 mb-4 leading-relaxed">you can do control your hater in this website</p>
+                <input 
+                  type="file" 
+                  id="fileInput" 
+                  accept="image/*" 
+                  style={{ display: 'none' }} 
+                  onChange={(e) => handleFileUpload(e)}
+                />
+                <button className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl" onClick={() => document.getElementById('fileInput')?.click()}>
+                  Try it!
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 3D 캐릭터 영역 */}
+          <div className="flex-1 max-w-md">
+            <div className="bg-transparent p-8 h-96 flex items-center justify-center transform translate-x-0" id="modelViewer">
+              <div className="w-full h-full">
+                <StaticModelViewer 
+                  modelPath="/models/Waving.glb"
+                  width="100%"
+                  height="100%"
+                />
+              </div>
             </div>
           </div>
         </div>
-
-        {/* 3D 캐릭터 영역 */}
-        <div className="flex-1 max-w-md">
-          <div className="bg-transparent p-8 h-96 flex items-center justify-center transform translate-x-0" id="modelViewer">
-            <div className="w-full h-full">
-              <StaticModelViewer 
-                modelPath={modelPath}
-                width="100%"
-                height="100%"
-              />
-
-            </div>
-          </div>
+      ) : (
+        /* GLB가 생성되면 전체 화면을 차지 */
+        <div 
+          id="threejsViewer" 
+          className="absolute inset-0 w-screen h-screen opacity-0"
+          style={{ transformOrigin: 'center center' }}
+        >
+          <ThreeJSViewer 
+            modelUrl={generatedGlbUrl}
+            width="100vw"
+            height="100vh"
+          />
         </div>
-      </div>
+      )}
+
+      {/* 프롬프트 입력 컴포넌트 - 로딩 완료 시 표시 */}
+      {generatedGlbUrl && (
+        <div id="promptComponent" className="absolute bottom-0 left-0 right-0 z-10 opacity-0">
+          <Component />
+        </div>
+      )}
     </div>
   )
 } 

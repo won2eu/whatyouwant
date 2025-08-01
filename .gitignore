@@ -1,0 +1,145 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Python virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Large files and archives
+*.zip
+*.tar.gz
+*.tar.xz
+*.tgz
+*.rar
+*.7z
+
+# Specific large files
+openpose.zip
+Miniconda3-latest-Linux-x86_64.sh*
+Python-3.10.13.tgz*
+cudnn-linux-x86_64-9.11.0.98_cuda12-archive.tar.xz
+cudnn-linux-x86_64-9.11.0.98_cuda12-archive/
+
+# Python build artifacts
+python
+python-config
+python-config.py
+python-gdb.py
+libpython3.10.a
+pyconfig.h
+config.log
+config.status
+Makefile
+Makefile.pre
+pybuilddir.txt
+
+# Python source directories (if not needed)
+Python/
+Objects/
+Parser/
+Programs/
+Misc/
+Modules/
+
+# AI/ML model directories (DECA and OpenPose are non-commercial licenses, SiTH is MIT license)
+DECA/
+openpose/
+
+# AI/ML model files (if too large)
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.pb
+*.onnx
+*.npz
+*.pkl
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Node.js (for frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# API keys and secrets
+*.key
+*.pem
+secrets.json
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache directories
+.cache/
+cache/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Large data files
+*.csv
+*.json
+*.xml
+*.txt
+!requirements.txt
+!package.json
+!tsconfig.json
+!next.config.ts
+!eslint.config.mjs
+!postcss.config.mjs
+!components.json 
